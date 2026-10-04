@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        
+        {
+            "name": "Pygame Zero",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pgzero.runner",
+            "args": [
+                "${file}"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }
+    ]
+}
