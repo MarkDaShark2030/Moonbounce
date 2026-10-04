@@ -4,7 +4,11 @@ on:
   push:
     branches: [main]
     paths:
-      - build/web/**
+      - main.py
+      - images/**
+      - sounds/**
+      - pygbag.ini
+      - web_index.html
       - .github/workflows/deploy-pages.yml
   workflow_dispatch:
 
@@ -26,6 +30,17 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build browser game
+        run: |
+          python -m pip install --upgrade pip pygbag
+          python -m pygbag --build --html --ume_block 0 --disable-sound-format-error --title "Moonbounce" --width 960 --height 640 .
+          cp web_index.html build/web/index.html
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5

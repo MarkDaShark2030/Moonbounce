@@ -1,4 +1,2 @@
 .venv/
-build/web-cache/
-build/.DS_Store
-build/version.txt
+build/

@@ -31,21 +31,27 @@ python -m http.server 8000 --directory build/web
 
 Open [http://localhost:8000/](http://localhost:8000/). `index.html` redirects automatically to the game.
 
+## Automatic GitHub Pages deployment
+
+Merging a change to `main` automatically rebuilds and deploys the browser game to [the public Moonbounce page](https://markdashark2030.github.io/Moonbounce/). The GitHub Actions workflow installs Python 3.12 and Pygbag, builds `build/web/` from the current source, then publishes that folder to GitHub Pages.
+
+No local build is required before pushing source changes. The local build scripts remain useful for testing before you merge.
+
 ## Browser build output
 
 | Path | Purpose |
 | --- | --- |
-| `build/web/moonbounce.html` | The game. It embeds `main.py` and the game assets. Deploy or open this file through an HTTP server. |
+| `build/web/moonbounce.html` | Locally generated game page. It embeds `main.py` and the game assets. |
 | `build/web/index.html` | A small redirect to `moonbounce.html`, so the folder can be deployed as a conventional web site. |
 | `moonbounce.html` | A compatibility redirect from the project root to `build/web/moonbounce.html`. It is useful only when serving the project root. |
 | `web_index.html` | Source for the generated `build/web/index.html` redirect. |
 | `build/web-cache/` | Pygbag's downloaded template/icon cache. It can be deleted safely and is ignored by Git. |
 
-The `build/` directory is intentionally not ignored by Git, so the generated web output can be committed or deployed. The local `.venv/` is ignored.
+The `build/` directory is generated output and is ignored by Git. GitHub Actions recreates it for each deployment, so the repository contains source files rather than a potentially stale web build. The local `.venv/` is also ignored.
 
 ## How the browser build works
 
-`build_web.bat` and `build_web.sh` run Pygbag with `--build --html`. They:
+`build_web.bat` and `build_web.sh` run Pygbag with `--build --html` for local testing. They:
 
 1. Change to the project directory, so the command works no matter where it is launched from.
 2. Use an installed Pygbag, or create a project-local `.venv/` and install Pygbag there when needed. This avoids modifying a system-managed Python installation.
@@ -88,9 +94,9 @@ Controls:
 | `images/moon.png` | Moon sprite. |
 | `sounds/bounce.wav` | Retained project audio asset; it is not currently played by the game. |
 | `pygbag.ini` | Excludes development files, the desktop game, redirects, and `.venv/` from the browser package. |
-| `.gitignore` | Ignores only `.venv/` and Pygbag's disposable `build/web-cache/`. |
+| `.gitignore` | Ignores the local virtual environment and all generated `build/` output. |
 
-Re-run a build after changing `main.py`, `web_index.html`, or any game asset. Changes to `game.py` affect only the desktop version.
+For GitHub Pages, simply merge changes to `main.py`, `web_index.html`, `pygbag.ini`, or game assets into `main`; the deployment workflow rebuilds the site. Re-run a local build only when you want to test it before merging. Changes to `game.py` affect only the desktop version.
 
 ## Play on desktop
 
