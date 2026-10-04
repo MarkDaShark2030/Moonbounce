@@ -1,5 +1,7 @@
+#! src="https://pygame-web.github.io/cdn/0.9.3/pythons.js" data-os="fs,snd,gui"
 import asyncio
 import random
+import sys
 
 import pygame
 
@@ -12,6 +14,40 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption(TITLE)
 clock = pygame.time.Clock()
 font = pygame.font.Font(None, 100)
+
+
+def configure_web_canvas():
+    """Keep the browser canvas scaled to the game's 3:2 aspect ratio."""
+    if sys.platform != "emscripten":
+        return
+
+    import platform
+
+    document = platform.document
+    document.documentElement.style.background = "#000"
+    document.body.style.margin = "0"
+    document.body.style.overflow = "hidden"
+    document.body.style.background = "#000"
+
+    canvas = document.getElementById("canvas")
+    canvas.style.width = "min(100vw, calc(100vh * 1.5))"
+    canvas.style.height = "min(100vh, calc(100vw / 1.5))"
+    canvas.style.position = "absolute"
+    canvas.style.left = "50%"
+    canvas.style.top = "50%"
+    canvas.style.right = "auto"
+    canvas.style.bottom = "auto"
+    canvas.style.margin = "0"
+    canvas.style.transform = "translate(-50%, -50%)"
+
+    canvas_3d = document.getElementById("canvas3d")
+    canvas_3d.style.display = "none"
+
+    # Prevent the Pygbag window-resize handler from overriding the 3:2 CSS.
+    platform.window.python.config.user_canvas = 1
+
+
+configure_web_canvas()
 
 background = pygame.image.load("images/background.png").convert()
 moon_image = pygame.image.load("images/moon.png").convert_alpha()

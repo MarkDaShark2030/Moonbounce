@@ -1,94 +1,104 @@
 # Moonbounce
 
-Click the bouncing moon to score points. Miss, and you lose a point. Every 10 hits the moon gets faster.
+Click the bouncing moon to score points. A hit earns one point; a miss loses one. Every 10 hits, the moon moves faster.
 
-The project has two ways to run:
+Moonbounce has two independent versions:
 
-- **Desktop:** original [Pygame Zero](https://pygame-zero.readthedocs.io/) game in `game.py`
-- **Browser:** Pygame port packaged with [pygbag](https://pygame-web.github.io/wiki/pygbag/) as WebAssembly, wrapped in an HTML file
+- **Desktop:** the original Pygame Zero game in `game.py`.
+- **Browser:** a Pygame version in `main.py`, packaged by Pygbag and run by a Python WebAssembly runtime.
 
-## Play in the browser
+## Quick start: play in a browser
 
-The HTML wrapper is `moonbounce.html` at the project root (a copy of `build/web/bouncingball.html`).
+Build the browser version first:
 
-Do not open that file by double-clicking it. The page loads a Python WebAssembly runtime, and browsers block that from `file://` URLs. Serve the folder over HTTP instead:
+Windows:
 
-```powershell
-python -m http.server 8000
+```bat
+build_web.bat
 ```
 
-Then open [http://localhost:8000/moonbounce.html](http://localhost:8000/moonbounce.html).
+Linux:
 
-The first load downloads the WASM Python/Pygame runtime from the pygame-web CDN (`https://pygame-web.github.io/cdn/`). After that, the game should start on the page: moon bouncing on the starfield, score in the corner, click to change the score.
+```sh
+./build_web.sh
+```
 
-## Play on the desktop
+Then serve the generated folder over HTTP. Do not open the HTML file directly from `file://`, because browsers block WebAssembly and asset loading in that mode.
 
-Install Pygame Zero, then run `game.py`:
+```sh
+python -m http.server 8000 --directory build/web
+```
 
-```powershell
+Open [http://localhost:8000/](http://localhost:8000/). `index.html` redirects automatically to the game.
+
+## Browser build output
+
+| Path | Purpose |
+| --- | --- |
+| `build/web/moonbounce.html` | The game. It embeds `main.py` and the game assets. Deploy or open this file through an HTTP server. |
+| `build/web/index.html` | A small redirect to `moonbounce.html`, so the folder can be deployed as a conventional web site. |
+| `moonbounce.html` | A compatibility redirect from the project root to `build/web/moonbounce.html`. It is useful only when serving the project root. |
+| `web_index.html` | Source for the generated `build/web/index.html` redirect. |
+| `build/web-cache/` | Pygbag's downloaded template/icon cache. It can be deleted safely and is ignored by Git. |
+
+The `build/` directory is intentionally not ignored by Git, so the generated web output can be committed or deployed. The local `.venv/` is ignored.
+
+## How the browser build works
+
+`build_web.bat` and `build_web.sh` run Pygbag with `--build --html`. They:
+
+1. Change to the project directory, so the command works no matter where it is launched from.
+2. Use an installed Pygbag, or create a project-local `.venv/` and install Pygbag there when needed. This avoids modifying a system-managed Python installation.
+3. Package `main.py`, `images/`, and the game audio into `build/web/moonbounce.html`.
+4. Replace Pygbag's archive-based `index.html` with the redirect from `web_index.html`. The default Pygbag index expects a `.apk`/`.tar.gz` archive, which does not exist for an embedded `--html` build and would otherwise display “Loading” indefinitely.
+
+Optional interpreter overrides:
+
+```sh
+PYTHON_BIN=python3.12 ./build_web.sh
+```
+
+```bat
+set PYTHON_BIN_OVERRIDE=py -3.12
+build_web.bat
+```
+
+On Linux, `VENV_DIR` may also be set to choose a local virtual-environment directory; it defaults to `.venv`.
+
+Pygbag creates an HTML package; it does not compile this project into a local `.wasm` file. The generated page downloads the Python/Pygame WebAssembly runtime from the pygame-web CDN on first load. Therefore, an internet connection is required the first time it is opened, and the output is not a fully offline bundle.
+
+## Browser display and controls
+
+The game always renders at **960×640** pixels. In a browser, that backing resolution is scaled to fit the available viewport while preserving the **3:2** aspect ratio. The surrounding page is black, so there are no white margins or stretching.
+
+The embedded Pygbag loader starts with only its file, sound, and graphics features. It deliberately omits the virtual-terminal feature, so the player cannot see or interact with a Python interpreter. `main.py` also hides Pygbag's unused auxiliary 3D canvas.
+
+Controls:
+
+- Click the moon: score +1.
+- Click anywhere else: score −1.
+
+## Source layout
+
+| Path | Purpose |
+| --- | --- |
+| `main.py` | Browser game loop and browser-canvas configuration. Uses an `asyncio` loop required by Pygbag. |
+| `game.py` | Standalone desktop Pygame Zero version. It is excluded from the browser package. |
+| `images/background.png` | 960×640 starfield background. |
+| `images/moon.png` | Moon sprite. |
+| `sounds/bounce.wav` | Retained project audio asset; it is not currently played by the game. |
+| `pygbag.ini` | Excludes development files, the desktop game, redirects, and `.venv/` from the browser package. |
+| `.gitignore` | Ignores only `.venv/` and Pygbag's disposable `build/web-cache/`. |
+
+Re-run a build after changing `main.py`, `web_index.html`, or any game asset. Changes to `game.py` affect only the desktop version.
+
+## Play on desktop
+
+Install Pygame Zero, then run the desktop entry point:
+
+```sh
 python -m pip install pgzero
 python game.py
 ```
 
-In VS Code / Cursor you can also use the existing **Pygame Zero** launch configuration in `.vscode/launch.json`.
-
-## Project layout
-
-| Path | Role |
-| --- | --- |
-| `game.py` | Desktop Pygame Zero game (`import pgzrun` / `pgzrun.go()`) |
-| `main.py` | Browser entry point: same gameplay in Pygame + `asyncio` |
-| `images/` | `background.png` and `moon.png` |
-| `sounds/` | Unused `bounce.wav` (kept with the project, not played yet) |
-| `moonbounce.html` | Standalone HTML wrapper you can serve |
-| `build/web/` | pygbag output (`bouncingball.html`, `index.html`, favicon) |
-| `pygbag.ini` | Optional pygbag ignore list |
-
-Pygame Zero looks for sprites in `images/` by name (`Actor("moon")`, `screen.blit("background", ...)`). The web port loads those same files with `pygame.image.load("images/...")`.
-
-## Why there are two Python files
-
-Pygbag expects the web game loop in `main.py`, and the HTML packager needs an async loop:
-
-```python
-async def main():
-    while running:
-        # ... update and draw ...
-        await asyncio.sleep(0)
-
-asyncio.run(main())
-```
-
-Pygame Zero’s `pgzrun.go()` is a blocking desktop runner. It does not yield to the browser, so it is not used for the WASM build. `game.py` stays as the original desktop version; `main.py` is the web-compatible rewrite of the same rules.
-
-## Rebuild the HTML / WASM package
-
-From the **parent** folder (`C:\Users\markl\Coding`), not from inside this project:
-
-```powershell
-python -m pip install pygbag --upgrade
-python -m pygbag --build --html --ume_block 0 BouncingBall
-```
-
-That writes `BouncingBall\build\web\bouncingball.html`. Copy it over the root wrapper if you want `moonbounce.html` updated:
-
-```powershell
-Copy-Item -Force BouncingBall\build\web\bouncingball.html BouncingBall\moonbounce.html
-```
-
-`--html` embeds the Python sources and image assets in one HTML file. `--ume_block 0` starts without waiting for an extra click (browsers may still delay audio until the user interacts).
-
-`--build` packages files and exits. Omit it if you want pygbag’s own test server on port 8000 instead of `python -m http.server`.
-
-## Gameplay (same on desktop and web)
-
-- Window size is 960×640, title **Moonbounce**.
-- Click the moon: score +1.
-- Click anywhere else: score −1.
-- Every 10 successful hits, minimum and maximum bounce speed increase by 1.
-
-## Notes
-
-- The HTML file is not a fully offline binary. It still fetches `pythons.js` and related WASM from the pygame-web CDN.
-- `build/web/index.html` is pygbag’s default loader page and expects archive files that the `--html` build does not create. Use `moonbounce.html` or `build/web/bouncingball.html`.
-- Rebuild after you change `main.py` or images; `game.py` only affects the desktop game.
+The desktop game uses the same 960×640 gameplay rules but does not share Pygbag's browser setup.
